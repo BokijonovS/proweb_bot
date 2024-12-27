@@ -1,4 +1,7 @@
 from pprint import pprint
+import os
+from flask import Flask
+from threading import Thread
 
 import telebot
 import requests
@@ -12,7 +15,18 @@ API_KEY = "FPSXaa11b9ac63744a619f3ab20df2157ea9"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# Flask setup
+app = Flask(__name__)
 
+@app.route("/")
+def home():
+    return "Bot is running!"
+
+def run_flask():
+    port = int(os.getenv("PORT", 5000))  # Use the PORT environment variable or default to 5000
+    app.run(host="0.0.0.0", port=port)
+
+# Telegram bot handlers
 @bot.message_handler(commands=['start'])
 def start_command(message):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -23,13 +37,11 @@ def start_command(message):
     bot.reply_to(message, "Welcome to the Freepik Downloader Bot! Please choose one of the options below!",
                  reply_markup=markup)
 
-
 @bot.message_handler(func=lambda message: "Icon" in message.text)
 def handle_message(message):
     chat_id = message.chat.id
     msg = bot.send_message(chat_id, "Icon id sini kiriting")
     bot.register_next_step_handler(msg, give_icon)
-
 
 def give_icon(message: Message):
     chat_id = message.chat.id
@@ -55,13 +67,11 @@ def give_icon(message: Message):
     else:
         bot.send_message(chat_id, f"Failed to fetch resource: {response.status_code} - {response.text}")
 
-
 @bot.message_handler(func=lambda message: "Video" in message.text or "Photo" in message.text)
 def handle_message(message):
     chat_id = message.chat.id
     msg = bot.send_message(chat_id, "Resurs id sini kiriting")
     bot.register_next_step_handler(msg, give_resource)
-
 
 def give_resource(message: Message):
     chat_id = message.chat.id
@@ -87,7 +97,10 @@ def give_resource(message: Message):
     else:
         bot.send_message(chat_id, f"Failed to fetch resource: {response.status_code} - {response.text}")
 
-
+# Main entry point
 if __name__ == "__main__":
     print("Bot is running...")
+    # Start Flask server in a separate thread
+    Thread(target=run_flask).start()
+    # Start the bot
     bot.polling()
